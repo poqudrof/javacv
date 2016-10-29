@@ -116,6 +116,11 @@
       <version>0.5.3-${javacpp.version}</version>
     </dependency>
     <dependency>
+        <groupId>org.bytedeco.javacpp-presets</groupId>
+        <artifactId>libfreenect2</artifactId>
+        <version>0.2.0-1.2.5-SNAPSHOT</version>
+        </dependency>
+    <dependency>
       <groupId>org.bytedeco.javacpp-presets</groupId>
       <artifactId>videoinput</artifactId>
       <version>0.200-${javacpp.version}</version>
