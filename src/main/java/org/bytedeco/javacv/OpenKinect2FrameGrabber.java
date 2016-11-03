@@ -66,6 +66,8 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
     private int IRImageHeight = DEFAULT_DEPTH_HEIGHT;
     private int IRFrameRate = 60;
 
+    private SyncMultiFrameListener frameListener;
+
     public ByteOrder getByteOrder() {
         return byteOrder;
     }
@@ -98,7 +100,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
                 if (freenect2Context != null) {
                     return;
                 }
-                Loader.load(org.bytedeco.javacpp.RealSense.class);
+                Loader.load(org.bytedeco.javacpp.freenect2.class);
 
                 // Context is shared accross cameras. 
                 freenect2Context = new Freenect2();
@@ -108,17 +110,24 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         }
     }
 
-    private boolean depth = false; // default to "video"
     private boolean colorEnabled = false;
     private boolean depthEnabled = false;
     private boolean IREnabled = false;
-    private FrameConverter converter = new OpenCVFrameConverter.ToIplImage();
 
     private String serial;
     private Freenect2Device device = null;
-    private PacketPipeline pipeline = null;
+
+    private int frameTypes = 0;
 
     public OpenKinect2FrameGrabber(int deviceNumber) {
+        if (freenect2Context == null) {
+            try {
+                OpenKinect2FrameGrabber.tryLoad();
+            } catch (Exception e) {
+                System.out.println("Exception in the TryLoad !" + e);
+                e.printStackTrace();
+            }
+        }
         if (freenect2Context == null) {
             System.out.println("FATAL error: OpenKinect2 camera: driver could not load.");
             System.exit(-1);
@@ -127,7 +136,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
             System.out.println("FATAL error: OpenKinect2: no device connected!");
             return;
         }
-        Freenect2Device device = null;
+        device = null;
         PacketPipeline pipeline = null;
 
         pipeline = new CpuPacketPipeline();
@@ -143,7 +152,8 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         try {
             OpenKinect2FrameGrabber.tryLoad();
         } catch (Exception e) {
-
+            System.out.println("Exception in the TryLoad !" + e);
+            e.printStackTrace();
         }
         Freenect2Device device = null;
         PacketPipeline pipeline = null;
@@ -200,7 +210,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
             System.out.println("RGB image, w:" + rgb.width() + " " + rgb.height());
             byte[] imgData = new byte[1000];
 //            ByteBuffer rgbData = 
-                    rgb.data().get(imgData);
+            rgb.data().get(imgData);
 //            byte[] array = rgbData.array();
             for (int pix = 0; pix < 10; pix++) {
                 System.out.print(imgData[pix] + " ");
@@ -217,13 +227,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
 
     public void enableColorStream() {
         if (!colorEnabled) {
-            if (imageWidth == 0) {
-                imageWidth = DEFAULT_COLOR_WIDTH;
-            }
-            if (imageHeight == 0) {
-                imageHeight = DEFAULT_COLOR_HEIGHT;
-            }
-//            device.enable_stream(RealSense.color, imageWidth, imageHeight, RealSense.rgb8, (int) frameRate);
+            frameTypes |= freenect2.Frame.Color;
             colorEnabled = true;
         }
     }
@@ -237,6 +241,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
 
     public void enableDepthStream() {
         if (!depthEnabled) {
+            frameTypes |= freenect2.Frame.Depth;
 //            device.enable_stream(RealSense.depth, depthImageWidth, depthImageHeight, RealSense.z16, depthFrameRate);
             depthEnabled = true;
         }
@@ -251,6 +256,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
 
     public void enableIRStream() {
         if (!IREnabled) {
+            frameTypes |= freenect2.Frame.Ir;
 //            device.enable_stream(RealSense.infrared, IRImageWidth, IRImageHeight, RealSense.y8, IRFrameRate);
             IREnabled = true;
         }
@@ -279,7 +285,19 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
 
     @Override
     public void start() throws FrameGrabber.Exception {
-//        device.start();
+        frameListener = new freenect2.SyncMultiFrameListener(frameTypes);
+
+        if (colorEnabled) {
+            device.setColorFrameListener(frameListener);
+        }
+        if (depthEnabled || colorEnabled) {
+            device.setIrAndDepthFrameListener(frameListener);
+        }
+        device.start();
+
+        System.out.println("OpenKinect2 device started.");
+        System.out.println("Serial: " + device.getSerialNumber().getString());
+        System.out.println("Firmware: " + device.getFirmwareVersion().getString());
     }
 
     /**
@@ -288,7 +306,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
      */
     @Override
     public void stop() throws FrameGrabber.Exception {
-//        device.stop();
+        device.stop();
         frameNumber = 0;
     }
     private Pointer rawDepthImageData = new Pointer((Pointer) null),
@@ -296,7 +314,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
             rawIRImageData = new Pointer((Pointer) null);
     private IplImage rawDepthImage = null, rawVideoImage = null, rawIRImage = null, returnImage = null;
 
-    public IplImage grabDepth() throws Exception {
+    private IplImage grabDepth() throws Exception {
 
         if (!depthEnabled) {
             System.out.println("Depth stream not enabled, impossible to get the image.");
@@ -330,40 +348,38 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         return rawDepthImage;
     }
 
-    public IplImage grabVideo() {
+    private IplImage grabVideo() {
 
         if (!colorEnabled) {
             System.out.println("Color stream not enabled, impossible to get the image.");
             return null;
         }
 
-//        int iplDepth = IPL_DEPTH_8U, channels = 3;
-//
-//        rawVideoImageData = device.get_frame_data(RealSense.color);
-//        int deviceWidth = device.get_stream_width(RealSense.color);
-//        int deviceHeight = device.get_stream_height(RealSense.color);
-//
-//        if (rawVideoImage == null || rawVideoImage.width() != deviceWidth || rawVideoImage.height() != deviceHeight) {
-//            rawVideoImage = IplImage.createHeader(deviceWidth, deviceHeight, iplDepth, channels);
-//        }
-//
-//        cvSetData(rawVideoImage, rawVideoImageData, deviceWidth * channels * iplDepth / 8);
-//
-//        if (iplDepth > 8 && !ByteOrder.nativeOrder().equals(byteOrder)) {
-//            // ack, the camera's endianness doesn't correspond to our machine ...
-//            // swap bytes of 16-bit images
-//            ByteBuffer bb = rawVideoImage.getByteBuffer();
-//            ShortBuffer in = bb.order(ByteOrder.BIG_ENDIAN).asShortBuffer();
-//            ShortBuffer out = bb.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-//            out.put(in);
-//        }
-//        if (channels == 3) {
-//            cvCvtColor(rawVideoImage, rawVideoImage, CV_RGB2BGR);
-//        }
+        int iplDepth = IPL_DEPTH_8U, channels = 4;
+        freenect2.Frame rgb = frames.get(freenect2.Frame.Color);
+
+        int deviceWidth = (int) rgb.width();
+        int deviceHeight = (int) rgb.height();
+
+        rawVideoImageData = rgb.data();
+        if (rawVideoImage == null || rawVideoImage.width() != deviceWidth || rawVideoImage.height() != deviceHeight) {
+            rawVideoImage = IplImage.createHeader(deviceWidth, deviceHeight, iplDepth, channels);
+        }
+        cvSetData(rawVideoImage, rawVideoImageData, deviceWidth * channels * iplDepth / 8);
+
+        if (iplDepth > 8 && !ByteOrder.nativeOrder().equals(byteOrder)) {
+            // ack, the camera's endianness doesn't correspond to our machine ...
+            // swap bytes of 16-bit images
+            ByteBuffer bb = rawVideoImage.getByteBuffer();
+            ShortBuffer in = bb.order(ByteOrder.BIG_ENDIAN).asShortBuffer();
+            ShortBuffer out = bb.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+            out.put(in);
+        }
+            cvCvtColor(rawVideoImage, rawVideoImage, COLOR_BGRA2RGBA);
         return rawVideoImage;
     }
 
-    public IplImage grabIR() {
+    private IplImage grabIR() {
 
         if (!IREnabled) {
             System.out.println("IR stream not enabled, impossible to get the image.");
@@ -394,6 +410,9 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         return rawIRImage;
     }
 
+    private FrameMap frames = new FrameMap();
+    int frameNumber = 0;
+
     /**
      *
      * @return null grabs all images, get them with grabColor, grabDepth, and
@@ -401,13 +420,37 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
      * @throws org.bytedeco.javacv.FrameGrabber.Exception
      */
     public Frame grab() throws Exception {
-//        device.wait_for_frames();
 
-//        if (colorEnabled) {
-//            IplImage image = grabVideo();
-//            return converter.convert(image);
-//        }
+        if (frameNumber > 0) {
+            System.out.println("OpenKinect2 Release frame");
+            frameListener.release(frames);
+        }
+
+        System.out.println("OpenKinect2 grab");
+        if (!frameListener.waitForNewFrame(frames, 10 * 1000)) // 10 seconds
+        {
+            System.out.println("Openkinect2: timeout!");
+            // TODO: throw exception
+        }
+        frameNumber++;
+        System.out.println("OpenKinect2 get images");
+        if (colorEnabled) {
+            grabVideo();
+        }
+        if (IREnabled) {
+            grabIR();
+        }
+        if (depthEnabled) {
+            grabDepth();
+        }
+
+//            freenect2.Frame ir = frames.get(freenect2.Frame.Ir);
+//            freenect2.Frame depth = frames.get(freenect2.Frame.Depth);
         return null;
+    }
+
+    public IplImage getVideoImage() {
+        return rawVideoImage;
     }
 
     @Override
