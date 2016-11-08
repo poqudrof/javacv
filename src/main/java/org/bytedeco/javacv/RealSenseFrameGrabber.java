@@ -222,7 +222,7 @@ public class RealSenseFrameGrabber extends FrameGrabber {
             rawIRImageData = new Pointer((Pointer) null);
     private IplImage rawDepthImage = null, rawVideoImage = null, rawIRImage = null, returnImage = null;
 
-    public IplImage grabDepth() throws Exception {
+    public IplImage grabDepth(){
 
         if (!depthEnabled) {
             System.out.println("Depth stream not enabled, impossible to get the image.");
