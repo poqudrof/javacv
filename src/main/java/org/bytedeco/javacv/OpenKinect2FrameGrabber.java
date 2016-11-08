@@ -235,7 +235,6 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
     public void enableDepthStream() {
         if (!depthEnabled) {
             frameTypes |= freenect2.Frame.Depth;
-//            device.enable_stream(RealSense.depth, depthImageWidth, depthImageHeight, RealSense.z16, depthFrameRate);
             depthEnabled = true;
         }
     }
@@ -243,7 +242,6 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
     public void enableIRStream() {
         if (!IREnabled) {
             frameTypes |= freenect2.Frame.Ir;
-//            device.enable_stream(RealSense.infrared, IRImageWidth, IRImageHeight, RealSense.y8, IRFrameRate);
             IREnabled = true;
         }
     }
@@ -264,7 +262,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         if (colorEnabled) {
             device.setColorFrameListener(frameListener);
         }
-        if (depthEnabled || colorEnabled) {
+        if (depthEnabled || IREnabled) {
             device.setIrAndDepthFrameListener(frameListener);
         }
         device.start();
@@ -289,12 +287,6 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
     private IplImage videoImageRGBA = null;
 
     protected void grabVideo() {
-
-        if (!colorEnabled) {
-            System.out.println("Color stream not enabled, impossible to get the image.");
-            return;
-        }
-
         int iplDepth = IPL_DEPTH_8U;
         freenect2.Frame rgb = frames.get(freenect2.Frame.Color);
 
@@ -323,6 +315,66 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         cvCvtColor(rawVideoImage, videoImageRGBA, COLOR_BGRA2RGBA);
     }
 
+    private IplImage rawIRImage = null;
+
+    protected void grabIR() {
+        /**
+         * 512x424 float. Range is [0.0, 65535.0].
+         */
+        // 16 bit IR ?!
+
+        freenect2.Frame IRImage = frames.get(freenect2.Frame.Ir);
+//        int iplDepth = IPL_DEPTH_8U;
+//        int channels = 4;
+
+        int channels = 1;
+        int iplDepth = IPL_DEPTH_32F;
+        int bpp = (int) IRImage.bytes_per_pixel();
+        int deviceWidth = (int) IRImage.width();
+        int deviceHeight = (int) IRImage.height();
+
+//        System.out.println("IR BPP: " + IRImage.bytes_per_pixel());
+//        System.out.println("IR size: " + deviceWidth + " " + deviceHeight);
+        Pointer rawIRData = IRImage.data();
+        if (rawIRImage == null) {
+            rawIRImage = IplImage.createHeader(deviceWidth, deviceHeight, iplDepth, channels);
+        }
+        cvSetData(rawIRImage, rawIRData, deviceWidth * channels * iplDepth / 8);
+
+//        if (iplDepth > 8 && !ByteOrder.nativeOrder().equals(byteOrder)) {
+//            // ack, the camera's endianness doesn't correspond to our machine ...
+//            // swap bytes of 16-bit images
+//            ByteBuffer bb = rawIRImage.getByteBuffer();
+//            ShortBuffer in = bb.order(ByteOrder.BIG_ENDIAN).asShortBuffer();
+//            ShortBuffer out = bb.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+//            out.put(in);
+//        }
+    }
+
+    private IplImage rawDepthImage = null;
+
+    protected void grabDepth() {
+
+        /**
+         * 512x424 float also ?.
+         */
+        freenect2.Frame depthImage = frames.get(freenect2.Frame.Ir);
+//        int iplDepth = IPL_DEPTH_8U;
+//        int channels = 4;
+
+        int channels = 1;
+        int iplDepth = IPL_DEPTH_32F;
+        int bpp = (int) depthImage.bytes_per_pixel();
+        int deviceWidth = (int) depthImage.width();
+        int deviceHeight = (int) depthImage.height();
+
+        Pointer rawDepthData = depthImage.data();
+        if (rawDepthImage == null) {
+            rawDepthImage = IplImage.createHeader(deviceWidth, deviceHeight, iplDepth, channels);
+        }
+        cvSetData(rawDepthImage, rawDepthData, deviceWidth * channels * iplDepth / 8);
+    }
+
     private FrameMap frames = new FrameMap();
 
     /**
@@ -333,23 +385,23 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
      */
     public Frame grab() throws Exception {
 
-        System.out.println("OpenKinect2 grab");
         if (!frameListener.waitForNewFrame(frames, 10 * 1000)) // 10 seconds
         {
             System.out.println("Openkinect2: timeout!");
             // TODO: throw exception
         }
         frameNumber++;
-        System.out.println("OpenKinect2 get images");
         if (colorEnabled) {
             grabVideo();
         }
         if (IREnabled) {
+            grabIR();
         }
         if (depthEnabled) {
+            grabDepth();
         }
 
-            frameListener.release(frames);
+        frameListener.release(frames);
         return null;
 //            freenect2.Frame ir = frames.get(freenect2.Frame.Ir);
 //            freenect2.Frame depth = frames.get(freenect2.Frame.Depth);
@@ -357,6 +409,14 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
 
     public IplImage getVideoImage() {
         return videoImageRGBA;
+    }
+
+    public IplImage getIRImage() {
+        return rawIRImage;
+    }
+
+    public IplImage getDepthImage() {
+        return rawDepthImage;
     }
 
     @Override
