@@ -22,9 +22,7 @@
 package org.bytedeco.javacv;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.ShortBuffer;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.Loader;
 import org.bytedeco.javacpp.Pointer;
@@ -265,6 +263,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         if (depthEnabled || IREnabled) {
             device.setIrAndDepthFrameListener(frameListener);
         }
+        rawVideoImage = IplImage.createHeader(1920, 1080, IPL_DEPTH_8U, 4);
         device.start();
 
         System.out.println("OpenKinect2 device started.");
@@ -285,29 +284,29 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
 //    private Pointer rawVideoImageData;
     private IplImage rawVideoImage = null;
     private IplImage videoImageRGBA = null;
+    private boolean hasFirstGoodColorImage = false;
+
+    private BytePointer videoBuffer = null;
 
     protected void grabVideo() {
         int iplDepth = IPL_DEPTH_8U;
         freenect2.Frame rgb = frames.get(freenect2.Frame.Color);
-
         int channels = (int) rgb.bytes_per_pixel();
         int deviceWidth = (int) rgb.width();
         int deviceHeight = (int) rgb.height();
 
-        Pointer rawVideoImageData = rgb.data();
+        BytePointer rawVideoImageData = rgb.data();
         if (rawVideoImage == null) {
             rawVideoImage = IplImage.createHeader(deviceWidth, deviceHeight, iplDepth, channels);
         }
-        cvSetData(rawVideoImage, rawVideoImageData, deviceWidth * channels * iplDepth / 8);
 
-        if (iplDepth > 8 && !ByteOrder.nativeOrder().equals(byteOrder)) {
-            // ack, the camera's endianness doesn't correspond to our machine ...
-            // swap bytes of 16-bit images
-            ByteBuffer bb = rawVideoImage.getByteBuffer();
-            ShortBuffer in = bb.order(ByteOrder.BIG_ENDIAN).asShortBuffer();
-            ShortBuffer out = bb.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-            out.put(in);
-        }
+//        if (videoBuffer == null) {
+//            videoBuffer = new BytePointer(1920 * 1080 * 4);
+//        }
+//        rawVideoImageData.limit(1920 * 1080 * 4);
+//        BytePointer.strcpy(videoBuffer, rawVideoImageData);
+//        BytePointer.memcpy(videoBuffer, rawVideoImageData, 1920 * 1080 * 4);
+        cvSetData(rawVideoImage, rawVideoImageData, deviceWidth * channels * iplDepth / 8);
 
         if (videoImageRGBA == null) {
             videoImageRGBA = rawVideoImage.clone();
@@ -321,11 +320,8 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         /**
          * 512x424 float. Range is [0.0, 65535.0].
          */
-        // 16 bit IR ?!
 
         freenect2.Frame IRImage = frames.get(freenect2.Frame.Ir);
-//        int iplDepth = IPL_DEPTH_8U;
-//        int channels = 4;
 
         int channels = 1;
         int iplDepth = IPL_DEPTH_32F;
@@ -333,22 +329,13 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         int deviceWidth = (int) IRImage.width();
         int deviceHeight = (int) IRImage.height();
 
-//        System.out.println("IR BPP: " + IRImage.bytes_per_pixel());
-//        System.out.println("IR size: " + deviceWidth + " " + deviceHeight);
         Pointer rawIRData = IRImage.data();
         if (rawIRImage == null) {
             rawIRImage = IplImage.createHeader(deviceWidth, deviceHeight, iplDepth, channels);
         }
+
         cvSetData(rawIRImage, rawIRData, deviceWidth * channels * iplDepth / 8);
 
-//        if (iplDepth > 8 && !ByteOrder.nativeOrder().equals(byteOrder)) {
-//            // ack, the camera's endianness doesn't correspond to our machine ...
-//            // swap bytes of 16-bit images
-//            ByteBuffer bb = rawIRImage.getByteBuffer();
-//            ShortBuffer in = bb.order(ByteOrder.BIG_ENDIAN).asShortBuffer();
-//            ShortBuffer out = bb.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-//            out.put(in);
-//        }
     }
 
     private IplImage rawDepthImage = null;
@@ -358,10 +345,7 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
         /**
          * 512x424 float also ?.
          */
-        freenect2.Frame depthImage = frames.get(freenect2.Frame.Ir);
-//        int iplDepth = IPL_DEPTH_8U;
-//        int channels = 4;
-
+        freenect2.Frame depthImage = frames.get(freenect2.Frame.Depth);
         int channels = 1;
         int iplDepth = IPL_DEPTH_32F;
         int bpp = (int) depthImage.bytes_per_pixel();
@@ -403,12 +387,11 @@ public class OpenKinect2FrameGrabber extends FrameGrabber {
 
         frameListener.release(frames);
         return null;
-//            freenect2.Frame ir = frames.get(freenect2.Frame.Ir);
-//            freenect2.Frame depth = frames.get(freenect2.Frame.Depth);
     }
 
     public IplImage getVideoImage() {
         return videoImageRGBA;
+//            return rawVideoImage;
     }
 
     public IplImage getIRImage() {
