@@ -1,4 +1,15 @@
 
+### December 7, 2016 version 1.3
+ * Fix unnecessary memory allocation in `OpenCVFrameGrabber` ([pull #575](https://github.com/bytedeco/javacv/pull/575))
+ * Add `FFmpegFrameFilter` to `RecordActivity` sample for Android ([pull #550](https://github.com/bytedeco/javacv/pull/550))
+ * Introduce platform artifact for easier cross-platform builds and to avoid issues with some build systems ([issue #395](https://github.com/bytedeco/javacv/issues/395))
+ * Add `RealSenseFrameGrabber` to capture images with librealsense ([pull #486](https://github.com/bytedeco/javacv/pull/486))
+ * Add `BioInspiredRetina.java` sample for the `opencv_bioinspired` module ([pull #505](https://github.com/bytedeco/javacv/pull/505))
+ * Update the `JavaCV` class with appropriate documentation comments ([issue #444](https://github.com/bytedeco/javacv/issues/444))
+ * Fix Javadoc links for externally referenced classes
+ * Fix seeking when calling `FFmpegFrameGrabber.setTimestamp()` on audio-only files
+ * Add more appropriate default pixel formats for JPEG formats in `FFmpegFrameRecorder` ([issue #410](https://github.com/bytedeco/javacv/issues/410))
+
 ### May 15, 2016 version 1.2
  * Optimize `AndroidFrameConverter` a bit and add a test ([pull #379](https://github.com/bytedeco/javacv/pull/379))
  * Fix `DC1394FrameGrabber` on the Windows platform ([issue bytedeco/procamcalib#4](https://github.com/bytedeco/procamcalib/issues/4))

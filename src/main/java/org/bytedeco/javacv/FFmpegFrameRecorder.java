@@ -408,8 +408,13 @@ public class FFmpegFrameRecorder extends FrameRecorder {
 
             /* put sample parameters */
             video_c.bit_rate(videoBitrate);
-            /* resolution must be a multiple of two, but round up to 16 as often required */
-            video_c.width((imageWidth + 15) / 16 * 16);
+            /* resolution must be a multiple of two. Scale height to maintain the aspect ratio. */
+            if (imageWidth % 2 == 1) {
+                int roundedWidth = imageWidth + 1;
+                imageHeight = (roundedWidth * imageHeight + imageWidth / 2) / imageWidth;
+                imageWidth = roundedWidth;
+            }
+            video_c.width(imageWidth);
             video_c.height(imageHeight);
             if (aspectRatio > 0) {
                 AVRational r = av_d2q(aspectRatio, 255);
@@ -435,6 +440,10 @@ public class FFmpegFrameRecorder extends FrameRecorder {
             } else if (video_c.codec_id() == AV_CODEC_ID_RAWVIDEO || video_c.codec_id() == AV_CODEC_ID_PNG ||
                        video_c.codec_id() == AV_CODEC_ID_HUFFYUV  || video_c.codec_id() == AV_CODEC_ID_FFV1) {
                 video_c.pix_fmt(AV_PIX_FMT_RGB32);   // appropriate for common lossless formats
+            } else if (video_c.codec_id() == AV_CODEC_ID_JPEGLS) {
+                video_c.pix_fmt(AV_PIX_FMT_BGR24);
+            } else if (video_c.codec_id() == AV_CODEC_ID_MJPEG || video_c.codec_id() == AV_CODEC_ID_MJPEGB) {
+                video_c.pix_fmt(AV_PIX_FMT_YUVJ420P);
             } else {
                 video_c.pix_fmt(AV_PIX_FMT_YUV420P); // lossy, but works with about everything
             }

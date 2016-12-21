@@ -4,8 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.bytedeco</groupId>
   <artifactId>javacv</artifactId>
-  <version>1.2</version>
-  <packaging>jar</packaging>
+  <version>1.3</version>
 
   <name>JavaCV</name>
   <description>Java interface to OpenCV and more</description>
@@ -94,7 +93,7 @@
     <dependency>
       <groupId>org.bytedeco.javacpp-presets</groupId>
       <artifactId>ffmpeg</artifactId>
-      <version>3.0.2-${javacpp.version}</version>
+      <version>3.2.1-${javacpp.version}</version>
     </dependency>
     <dependency>
       <groupId>org.bytedeco.javacpp-presets</groupId>
@@ -121,6 +120,11 @@
         <artifactId>libfreenect2</artifactId>
         <version>0.2.0-1.2</version>
         </dependency>
+    <dependency>
+      <groupId>org.bytedeco.javacpp-presets</groupId>
+      <artifactId>librealsense</artifactId>
+      <version>1.9.6-${javacpp.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.bytedeco.javacpp-presets</groupId>
       <artifactId>videoinput</artifactId>
@@ -168,13 +172,6 @@
       <version>2.3.1</version>
       <optional>true</optional>
     </dependency>
-
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.12</version>
-      <optional>true</optional>
-    </dependency>
   </dependencies>
 
   <build>
@@ -202,30 +199,8 @@
         </configuration>
       </plugin>
       <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.10</version>
-        <executions>
-          <execution>
-            <id>properties</id>
-            <goals>
-              <goal>properties</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>copy-dependencies</id>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-            <configuration>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-              <stripVersion>true</stripVersion>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>2.6</version>
+        <version>3.0.2</version>
         <configuration>
           <archive>
             <manifest>
@@ -254,26 +229,8 @@
         </configuration>
       </plugin>
       <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.5.5</version>
-        <configuration>
-          <descriptors>
-            <descriptor>src/main/assembly/bin.xml</descriptor>
-            <descriptor>src/main/assembly/src.xml</descriptor>
-          </descriptors>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <artifactId>maven-source-plugin</artifactId>
-        <version>2.4</version>
+        <version>3.0.1</version>
         <executions>
           <execution>
             <id>attach-source</id>
@@ -285,7 +242,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.10.3</version>
+        <version>2.10.4</version>
         <executions>
           <execution>
             <id>attach-javadocs</id>
@@ -293,7 +250,22 @@
               <goal>jar</goal>
             </goals>
             <configuration>
-              <detectLinks>true</detectLinks>
+              <links>
+                <link>http://bytedeco.org/javacpp/apidocs/</link>
+                <link>http://bytedeco.org/javacpp-presets/opencv/apidocs/</link>
+                <link>http://bytedeco.org/javacpp-presets/ffmpeg/apidocs/</link>
+                <link>http://bytedeco.org/javacpp-presets/flycapture/apidocs/</link>
+                <link>http://bytedeco.org/javacpp-presets/libdc1394/apidocs/</link>
+                <link>http://bytedeco.org/javacpp-presets/libfreenect/apidocs/</link>
+                <link>http://bytedeco.org/javacpp-presets/videoinput/apidocs/</link>
+                <link>http://bytedeco.org/javacpp-presets/artoolkitplus/apidocs/</link>
+                <link>http://bytedeco.org/javacpp-presets/flandmark/apidocs/</link>
+                <link>https://developer.android.com/reference/</link>
+                <link>https://jogamp.org/deployment/v2.3.1/javadoc/gluegen/javadoc/</link>
+                <link>https://jogamp.org/deployment/v2.3.1/javadoc/jocl/javadoc/</link>
+                <link>https://jogamp.org/deployment/v2.3.1/javadoc/jogl/javadoc/</link>
+                <link>http://junit.org/junit4/javadoc/4.11/</link>
+              </links>
             </configuration>
           </execution>
         </executions>
