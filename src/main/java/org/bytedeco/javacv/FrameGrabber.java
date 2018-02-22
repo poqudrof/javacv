@@ -45,7 +45,7 @@ import java.util.concurrent.Future;
 public abstract class FrameGrabber implements Closeable {
 
     public static final List<String> list = new LinkedList<String>(Arrays.asList(new String[] {
-		"DC1394", "FlyCapture", "FlyCapture2", "OpenKinect", "OpenKinect2", "RealSense", "PS3Eye", "VideoInput", "OpenCV", "FFmpeg", "IPCamera" }));
+		"DC1394", "FlyCapture", "FlyCapture2", "OpenKinect", "OpenKinect2", "RealSense", "OpenNI2", "PS3Eye", "VideoInput", "OpenCV", "FFmpeg", "IPCamera" }));
     public static void init() {
         for (String name : list) {
             try {
