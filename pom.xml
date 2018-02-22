@@ -153,6 +153,11 @@
       <version>2.3.1</version>
       <optional>true</optional>
     </dependency>
+    <dependency>
+      <groupId>org.openni</groupId>
+      <artifactId>OpenNI</artifactId>
+      <version>2.3</version>
+    </dependency>
   </dependencies>
 
   <repositories>
@@ -166,6 +171,10 @@
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
+    </repository>
+    <repository>
+      <id>realitytech public</id>
+      <url>http://forum.rea.lity.tech:8081/repository/public/</url>
     </repository>
   </repositories>
 
